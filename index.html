@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Questrial&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+
+    <title>YeaPlanner</title>
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="header__info">
+          <div class="header__logo">
+            <img src="./img/notes-svgrepo-com.svg" alt="logo" />
+          </div>
+          <h1 class="header__title">ToDo</h1>
+        </div>
+      </div>
+    </header>
+    <main class="main">
+      <section class="section">
+        <div class="container">
+          <div class="section__add-task">
+            <input
+              type="text"
+              class="section__add-input"
+              id="main-input"
+              placeholder="Введите задачу"
+            />
+            <button class="section__add-button" id="main-button">
+              <p class="button__text">Add</p>
+              <img src="./img/plus.svg" alt="plus" />
+            </button>
+          </div>
+          <ul class="section__list-tasks">
+            <li class="section__list-task">
+              <a class="section__list-link" id="section__list-all">Все задачи</a>
+              <div class="section__counter" id="section__counter-all">0</div>
+            </li>
+            <li class="section__list-task">
+              <a class="section__list-link" id="section__list-active">Активные Задачи</a>
+              <div class="section__counter" id="section__counter-active">0</div>
+            </li>
+            <li class="section__list-task">
+              <a class="section__list-link" id="section__list-end">Завершенные задачи</a>
+              <div class="section__counter" id="section__counter-end">0</div>
+            </li>
+          </ul>
+          <div class="section__tasks">
+            <div class="section__tasks-top">
+              <img src="./img/calendar.svg" alt="calendar" />
+            </div>
+            <div class="section__tasks-main">
+              <div class="section__tasks-title">Тут будут находиться ваши задачи</div>
+              <!--               <div class="section__task">
+                <input type="checkbox" id="task-checkbox" class="section__task-checkbox" />
+                <p class="section__task-title">
+                  Integer urna interdum massa libero auctor neque turpis turpis semper. Duis vel sed
+                  fames integer.
+                </p>
+                <button class="button__delete">
+                  <img src="./img/trash-2.svg" alt="delete" class="button__delete-svg" />
+                </button>
+              </div> -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
