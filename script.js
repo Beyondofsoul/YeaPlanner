@@ -1,3 +1,5 @@
+import { createObservable } from './createObservable.js';
+
 const addInput = document.getElementById('main-input');
 const addButton = document.getElementById('main-button');
 const counterAll = document.getElementById('section__counter-all');
@@ -14,6 +16,10 @@ const endTasksBtn = document.getElementById('section__list-end');
 
 let currentFilter = 'all';
 let tasks = [];
+
+const Observable = createObservable([]);
+
+Observable.subscribe(renderTask);
 
 //LocalStorage
 function loadTasksFromStorage() {
@@ -71,16 +77,19 @@ function addTask() {
       sectionTasksTitle.remove();
       sectionTaskTop.remove();
     }
-
-    tasks.push({
-      title: inputValue,
+    const task = {
+      id: Date.now(),
+      text: inputValue,
       completed: false,
-    });
+    };
+
+    tasks.push(task);
+    saveTasksToStorage();
   }
   addInput.value = '';
   renderFilteredTasks();
 }
-//Отслеживание Счетчиков
+//Отслеживание Счетчиков/*
 function updateCounters() {
   const allTasks = tasks.length;
   const completedTasks = tasks.filter((task) => task.completed).length;
@@ -89,15 +98,13 @@ function updateCounters() {
   counterAll.textContent = allTasks;
   counterEnd.textContent = completedTasks;
   counterActive.textContent = activeTasks;
-
-  saveTasksToStorage();
 }
 
 //Чекбокс обработчик
 function addCheckboxListener(checkbox, taskElement) {
   checkbox.addEventListener('change', () => {
-    const taskTitle = taskElement.querySelector('.section__task-title').textContent;
-    const taskIndex = tasks.findIndex((task) => task.title === taskTitle);
+    const taskId = Number(taskElement.dataset.taskId);
+    const taskIndex = tasks.findIndex((task) => task.id === taskId);
     if (taskIndex !== -1) {
       tasks[taskIndex].completed = checkbox.checked;
 
@@ -109,24 +116,25 @@ function addCheckboxListener(checkbox, taskElement) {
 function deleteTask(event) {
   const taskElement = event.target.closest('.section__task');
   if (taskElement) {
-    const taskTitle = taskElement.querySelector('.section__task-title').textContent;
-    tasks = tasks.filter((task) => task.title !== taskTitle);
+    const taskId = Number(taskElement.dataset.taskId);
+    tasks = tasks.filter((task) => task.id !== taskId);
+
     renderFilteredTasks();
-    updateCounters();
-    if (tasks.length == 0) {
-      return sectionTasksTitle;
-    }
+    saveTasksToStorage();
   }
 }
 
 //Рендер Таски
-function renderTask(title, completed = false) {
+function renderTask(task) {
   const taskElement = document.createElement('div');
   taskElement.className = 'section__task';
 
+  taskElement.dataset.taskId = task.id;
+
   taskElement.innerHTML = `
-  <input type="checkbox" class="section__task-checkbox" ${completed ? 'checked' : ''} />
-  <p class="section__task-title">${title}</p>
+
+  <input type="checkbox" class="section__task-checkbox" ${task.completed ? 'checked' : ''} />
+  <p class="section__task-title">${task.text}</p>
   <button class="button__delete">
       <img src="./img/trash-2.svg" alt="delete" class="button__delete-svg" />
   </button>
@@ -154,7 +162,7 @@ function renderFilteredTasks() {
     }
   });
   filteredTasks.forEach((task) => {
-    renderTask(task.title, task.completed);
+    Observable.setState(task);
   });
   updateFilterButtons();
 }
