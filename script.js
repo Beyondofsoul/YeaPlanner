@@ -1,137 +1,130 @@
-import { createObservable } from './createObservable.js';
+import { createObservable } from './js/createObservable.js';
+import { DOMElements } from './js/elements.js';
+import { Storage } from './js/storage.js';
+import { taskService } from './js/taskService.js';
+const TodoApp = () => {
+  const initialTasks = Storage.loadTasks();
 
-const addInput = document.getElementById('main-input');
-const addButton = document.getElementById('main-button');
-const counterAll = document.getElementById('section__counter-all');
-const counterActive = document.getElementById('section__counter-active');
-const counterEnd = document.getElementById('section__counter-end');
-const sectionTasks = document.querySelector('.section__tasks');
+  const tasksObservable = createObservable(initialTasks);
+  const currentObservable = createObservable('all');
 
-const sectionTaskTop = document.querySelector('.section__tasks-top');
-const sectionTasksTitle = document.querySelector('.section__tasks-title');
+  tasksObservable.subscribe((tasks) => {
+    const currentFilter = currentObservable.getState();
+    renderFilteredTasks(tasks, currentFilter);
+    updateCounters(tasks);
 
-const allTasksBtn = document.getElementById('section__list-all');
-const activeTasksBtn = document.getElementById('section__list-active');
-const endTasksBtn = document.getElementById('section__list-end');
-
-let currentFilter = 'all';
-let tasks = [];
-
-const Observable = createObservable([]);
-
-Observable.subscribe(renderTask);
-
-//LocalStorage
-function loadTasksFromStorage() {
-  const savedTasks = localStorage.getItem('tasks');
-
-  if (savedTasks) {
-    tasks = JSON.parse(savedTasks);
-
-    if (tasks.length > 0 && sectionTasksTitle) {
-      sectionTasksTitle.remove();
-    }
-    if (tasks.length == 0) {
-      return sectionTasksTitle;
-    }
-    renderFilteredTasks();
-    updateCounters();
-  }
-}
-function saveTasksToStorage() {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-}
-//Обсервер
-const observer = new MutationObserver((mutations) => {
-  mutations.forEach((mutation) => {
-    if (mutation.type === 'childList') {
-      updateCounters();
-    }
+    Storage.saveTask(tasks);
   });
-});
+  currentObservable.subscribe((current) => {
+    const tasks = tasksObservable.getState();
+    renderFilteredTasks(tasks, current);
+    updateFilterButtons(current, DOMElements);
+  });
+  function initialRender() {
+    const tasks = tasksObservable.getState();
+    const filter = currentObservable.getState();
 
-observer.observe(sectionTasks, { childList: true, subtree: false });
-//Стили фильтрации
-function updateFilterButtons() {
-  [allTasksBtn, activeTasksBtn, endTasksBtn].forEach((btn) => {
-    btn.classList.remove('active');
+    if (tasks.length > 0 && DOMElements.sectionTasksTitle) {
+      DOMElements.sectionTasksTitle.remove();
+      if (DOMElements.sectionTaskTop) {
+        DOMElements.sectionTaskTop.remove();
+      }
+    }
+
+    renderFilteredTasks(tasks, filter);
+
+    updateCounters(tasks, DOMElements);
+    updateFilterButtons(filter, DOMElements);
+  }
+  //Обсервер
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        updateCounters();
+      }
+    });
   });
 
-  switch (currentFilter) {
-    case 'all':
-      allTasksBtn.classList.add('active');
-      break;
-    case 'active':
-      activeTasksBtn.classList.add('active');
-      break;
-    case 'completed':
-      endTasksBtn.classList.add('active');
-      break;
-  }
-}
-//Добавление задач
-function addTask() {
-  const inputValue = addInput.value.trim();
-  if (inputValue !== '') {
-    if (sectionTasksTitle && sectionTaskTop) {
-      sectionTasksTitle.remove();
-      sectionTaskTop.remove();
+  observer.observe(DOMElements.sectionTasks, { childList: true, subtree: false });
+  //Стили фильтрации
+  function updateFilterButtons(currentFilter) {
+    [DOMElements.allTasksBtn, DOMElements.activeTasksBtn, DOMElements.endTasksBtn].forEach(
+      (btn) => {
+        btn.classList.remove('active');
+      },
+    );
+
+    switch (currentFilter) {
+      case 'all':
+        DOMElements.allTasksBtn.classList.add('active');
+        break;
+      case 'active':
+        DOMElements.activeTasksBtn.classList.add('active');
+        break;
+      case 'completed':
+        DOMElements.endTasksBtn.classList.add('active');
+        break;
     }
-    const task = {
-      id: Date.now(),
-      text: inputValue,
-      completed: false,
-    };
-
-    tasks.push(task);
-    saveTasksToStorage();
   }
-  addInput.value = '';
-  renderFilteredTasks();
-}
-//Отслеживание Счетчиков/*
-function updateCounters() {
-  const allTasks = tasks.length;
-  const completedTasks = tasks.filter((task) => task.completed).length;
-  const activeTasks = allTasks - completedTasks;
+  //Добавление задач
+  function addTask() {
+    const inputValue = DOMElements.addInput.value.trim();
+    if (inputValue !== '') {
+      if (DOMElements.sectionTasksTitle && DOMElements.sectionTaskTop) {
+        DOMElements.sectionTasksTitle.remove();
+        DOMElements.sectionTaskTop.remove();
+      }
+      const task = taskService.createTask(inputValue);
 
-  counterAll.textContent = allTasks;
-  counterEnd.textContent = completedTasks;
-  counterActive.textContent = activeTasks;
-}
-
-//Чекбокс обработчик
-function addCheckboxListener(checkbox, taskElement) {
-  checkbox.addEventListener('change', () => {
-    const taskId = Number(taskElement.dataset.taskId);
-    const taskIndex = tasks.findIndex((task) => task.id === taskId);
-    if (taskIndex !== -1) {
-      tasks[taskIndex].completed = checkbox.checked;
-
-      renderFilteredTasks();
+      const currentTasks = tasksObservable.getState();
+      tasksObservable.setState([...currentTasks, task]);
     }
-  });
-}
-//Удаление таски
-function deleteTask(event) {
-  const taskElement = event.target.closest('.section__task');
-  if (taskElement) {
-    const taskId = Number(taskElement.dataset.taskId);
-    tasks = tasks.filter((task) => task.id !== taskId);
-
-    renderFilteredTasks();
-    saveTasksToStorage();
+    DOMElements.addInput.value = '';
   }
-}
+  //Отслеживание Счетчиков/*
+  function updateCounters(tasks) {
+    if (!tasks) return;
 
-//Рендер Таски
-function renderTask(task) {
-  const taskElement = document.createElement('div');
-  taskElement.className = 'section__task';
+    const allTasks = tasks.length;
+    const completedTasks = tasks.filter((task) => task.completed).length;
+    const activeTasks = allTasks - completedTasks;
 
-  taskElement.dataset.taskId = task.id;
+    DOMElements.counterAll.textContent = allTasks;
+    DOMElements.counterEnd.textContent = completedTasks;
+    DOMElements.counterActive.textContent = activeTasks;
+  }
 
-  taskElement.innerHTML = `
+  //Чекбокс обработчик
+  function addCheckboxListener(checkbox, taskElement) {
+    checkbox.addEventListener('change', () => {
+      const taskId = Number(taskElement.dataset.taskId);
+      const currentTasks = tasksObservable.getState();
+      const updatedTasks = currentTasks.map((task) =>
+        task.id === taskId ? { ...task, completed: checkbox.checked } : task,
+      );
+      tasksObservable.setState(updatedTasks);
+    });
+  }
+  //Удаление таски
+  function deleteTask(event) {
+    const taskElement = event.target.closest('.section__task');
+    if (taskElement) {
+      const taskId = Number(taskElement.dataset.taskId);
+      const currentTasks = tasksObservable.getState();
+      const updatedTasks = currentTasks.filter((task) => task.id !== taskId);
+
+      tasksObservable.setState(updatedTasks);
+    }
+  }
+
+  //Рендер Таски
+  function renderTask(task) {
+    const taskElement = document.createElement('div');
+    taskElement.className = 'section__task';
+
+    taskElement.dataset.taskId = task.id;
+
+    taskElement.innerHTML = `
 
   <input type="checkbox" class="section__task-checkbox" ${task.completed ? 'checked' : ''} />
   <p class="section__task-title">${task.text}</p>
@@ -139,59 +132,50 @@ function renderTask(task) {
       <img src="./img/trash-2.svg" alt="delete" class="button__delete-svg" />
   </button>
 `;
-  const checkbox = taskElement.querySelector('.section__task-checkbox');
-  addCheckboxListener(checkbox, taskElement);
+    const checkbox = taskElement.querySelector('.section__task-checkbox');
+    addCheckboxListener(checkbox, taskElement);
 
-  const deleteBtn = taskElement.querySelector('.button__delete');
-  deleteBtn.addEventListener('click', deleteTask);
+    const deleteBtn = taskElement.querySelector('.button__delete');
+    deleteBtn.addEventListener('click', deleteTask);
 
-  sectionTasks.appendChild(taskElement);
-}
+    DOMElements.sectionTasks.appendChild(taskElement);
+  }
 
-function renderFilteredTasks() {
-  sectionTasks.innerHTML = '';
+  function renderFilteredTasks(tasks, currentFilter) {
+    if (!DOMElements.sectionTasks) return;
+    DOMElements.sectionTasks.innerHTML = '';
 
-  const filteredTasks = tasks.filter((task) => {
-    switch (currentFilter) {
-      case 'active':
-        return !task.completed;
-      case 'completed':
-        return task.completed;
-      default:
-        return true;
+    const filteredTasks = taskService.filterTasks(tasks, currentFilter);
+
+    filteredTasks.forEach((task) => {
+      renderTask(task);
+    });
+  }
+
+  //Евент листнеры
+  DOMElements.addButton.addEventListener('click', addTask);
+  DOMElements.addInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      addTask();
     }
   });
-  filteredTasks.forEach((task) => {
-    Observable.setState(task);
+  DOMElements.allTasksBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    currentObservable.setState('all');
   });
-  updateFilterButtons();
-}
 
-//Евент листнеры
-addButton.addEventListener('click', addTask);
-addInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    addTask();
-  }
-});
-allTasksBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  currentFilter = 'all';
-  renderFilteredTasks();
-});
+  DOMElements.activeTasksBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    currentObservable.setState('active');
+  });
 
-activeTasksBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  currentFilter = 'active';
-  renderFilteredTasks();
-});
+  DOMElements.endTasksBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    currentObservable.setState('completed');
+  });
 
-endTasksBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  currentFilter = 'completed';
-  renderFilteredTasks();
-});
-document.addEventListener('DOMContentLoaded', () => {
-  loadTasksFromStorage();
-  updateFilterButtons();
-});
+  updateFilterButtons(currentObservable.getState());
+  initialRender();
+};
+document.addEventListener('DOMContentLoaded', TodoApp);
+export default TodoApp;
